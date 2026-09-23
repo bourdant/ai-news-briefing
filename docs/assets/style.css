@@ -1,0 +1,38 @@
+
+:root{color-scheme:light dark;--bg:#f7f7fb;--card:#ffffff;--text:#1a1a2e;
+--muted:#6b6b80;--accent:#5b5bd6;--border:#e6e6ef}
+@media (prefers-color-scheme: dark){:root{--bg:#15151f;--card:#1e1e2c;
+--text:#f1f1f5;--muted:#9b9bab;--accent:#8888ff;--border:#2c2c3c}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+font-family:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic",
+sans-serif;line-height:1.6;padding-bottom:48px}
+.wrap{max-width:640px;margin:0 auto;padding:20px 16px}
+header.top{padding:24px 16px 8px;text-align:center}
+header.top h1{font-size:1.15rem;margin:0 0 4px}
+header.top .date{color:var(--muted);font-size:.9rem}
+.one-liner{background:var(--card);border:1px solid var(--border);border-radius:14px;
+padding:16px;margin:16px 0;font-weight:600;font-size:1.05rem}
+.note{color:var(--muted);font-size:.85rem;margin:8px 0 20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+padding:18px;margin-bottom:16px}
+.card .rank{color:var(--accent);font-weight:700;font-size:.8rem}
+.card h2{font-size:1.05rem;margin:6px 0 10px}
+.card .category{display:inline-block;font-size:.75rem;color:var(--muted);
+margin-bottom:10px}
+.card .body p{margin:0 0 10px;font-size:.95rem}
+.card .metric-note{font-size:.8rem;color:var(--muted);background:var(--bg);
+border-radius:8px;padding:8px 10px;margin:10px 0}
+.card .sources{font-size:.85rem;margin:10px 0 4px}
+.card .sources a{color:var(--accent);text-decoration:none;margin-right:10px}
+.reactions{display:flex;gap:10px;margin-top:14px}
+.reactions button{flex:1;padding:10px 0;border-radius:10px;border:1px solid var(--border);
+background:var(--bg);font-size:1.2rem;cursor:pointer}
+.reactions button .count{display:block;font-size:.7rem;color:var(--muted);margin-top:2px}
+.reactions button.picked{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 15%, var(--bg))}
+.index-list a{display:block;background:var(--card);border:1px solid var(--border);
+border-radius:12px;padding:14px 16px;margin-bottom:10px;text-decoration:none;
+color:var(--text)}
+.index-list a .d{font-size:.8rem;color:var(--muted)}
+.index-list a .l{font-weight:600;margin-top:2px}
+footer{text-align:center;color:var(--muted);font-size:.8rem;margin-top:24px}
