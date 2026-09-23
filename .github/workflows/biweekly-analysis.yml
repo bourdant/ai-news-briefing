@@ -1,0 +1,46 @@
+name: Biweekly Reaction Analysis
+
+on:
+  schedule:
+    - cron: "0 6 * * 1" # 매주 월요일 06:00 UTC = 15:00 KST (스크립트가 14일 간격 자체 검사)
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run biweekly analysis
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KAKAO_REST_API_KEY: ${{ secrets.KAKAO_REST_API_KEY }}
+          KAKAO_REFRESH_TOKEN: ${{ secrets.KAKAO_REFRESH_TOKEN }}
+          KAKAO_CLIENT_SECRET: ${{ secrets.KAKAO_CLIENT_SECRET }}
+          GH_PAT: ${{ secrets.GH_PAT }}
+          PAGE_BASE_URL: ${{ vars.PAGE_BASE_URL }}
+          CF_WORKER_URL: ${{ vars.CF_WORKER_URL }}
+          ANALYSIS_API_KEY: ${{ secrets.ANALYSIS_API_KEY }}
+        run: python pipeline/analyze_reactions.py
+
+      - name: Commit state file
+        run: |
+          git config user.name "ai-news-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/data/last_analysis.json
+          if git diff --cached --quiet; then
+            echo "변경사항 없음"
+          else
+            git commit -m "chore: update biweekly analysis state"
+            git push
+          fi
