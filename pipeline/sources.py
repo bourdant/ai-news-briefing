@@ -35,6 +35,8 @@ SOURCES = [
         "rss": "https://feeds.feedburner.com/geeknews-feed",
         "kind": "community",
         "needs_search": False,
+        # GeekNews는 AI 외 일반 IT 소식도 섞여 있어 키워드로 거른다.
+        "keyword_filter": True,
     },
     {
         "key": "rundown",
@@ -54,9 +56,10 @@ SOURCES = [
     {
         "key": "the_batch",
         "name": "The Batch",
-        "rss": "https://www.deeplearning.ai/the-batch/feed/",
+        "rss": None,  # deeplearning.ai가 RSS 피드를 제공하지 않아 웹 검색으로 보완
+        "homepage": "https://www.deeplearning.ai/the-batch/",
         "kind": "newsletter",
-        "needs_search": False,
+        "needs_search": True,
     },
     {
         "key": "openai_blog",

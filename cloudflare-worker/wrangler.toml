@@ -5,11 +5,10 @@ compatibility_date = "2025-09-01"
 # wrangler kv namespace create REACTIONS 실행 후 나오는 id를 아래에 채워주세요.
 [[kv_namespaces]]
 binding = "REACTIONS"
-id = "REPLACE_ME_KV_NAMESPACE_ID"
+id = "861e437483b7408aae58b34c132bd692"
 
 [vars]
-# GitHub Pages 주소로 교체 (예: https://username.github.io)
-PAGES_ORIGIN = "https://REPLACE_ME.github.io"
+PAGES_ORIGIN = "https://bourdant.github.io"
 
 # ANALYSIS_API_KEY는 여기 적지 말고 아래 명령으로 시크릿으로 등록하세요:
 #   wrangler secret put ANALYSIS_API_KEY

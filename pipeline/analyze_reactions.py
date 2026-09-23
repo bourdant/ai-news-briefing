@@ -10,10 +10,10 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import requests
-from anthropic import Anthropic
+
+from claude_cli import run_claude
 
 KST = timezone(timedelta(hours=9))
-MODEL = os.environ.get("CLAUDE_MODEL", "claude-sonnet-5")
 INTERVAL_DAYS = 14
 
 DOCS_DIR = Path(__file__).resolve().parent.parent / "docs"
@@ -98,7 +98,6 @@ def _summarize_with_claude(enriched: list[dict], since: str, until: str) -> str:
     ranked = sorted(by_category.items(), key=lambda kv: kv[1], reverse=True)
     ranked_ko = [{"category": CATEGORY_LABEL_KO.get(c, c), "fire_total": n} for c, n in ranked if n > 0]
 
-    client = Anthropic()
     system = (
         "당신은 AI 뉴스 브리핑 구독자의 2주치 반응(🔥/😐/💤 클릭) 데이터를 분석해 "
         "친근한 존댓말 한국어로 짧게 요약하는 역할입니다. 중학생도 이해할 쉬운 말을 씁니다. "
@@ -111,14 +110,8 @@ def _summarize_with_claude(enriched: list[dict], since: str, until: str) -> str:
         f"🔥가 많았던 기사 상위: "
         f"{json.dumps([{'title': a['title'], 'fire': a['counts'].get('fire', 0)} for a in top_articles], ensure_ascii=False)}"
     )
-    resp = client.messages.create(
-        model=MODEL,
-        max_tokens=500,
-        temperature=0.3,
-        system=system,
-        messages=[{"role": "user", "content": user}],
-    )
-    text = "".join(b.text for b in resp.content if getattr(b, "type", "") == "text").strip()
+    envelope = run_claude(prompt=user, system_prompt=system)
+    text = (envelope.get("result") or "").strip()
     return text[:200]
 
 

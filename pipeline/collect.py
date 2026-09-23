@@ -14,7 +14,7 @@ from sources import AI_KEYWORDS, SOURCES
 
 KST = timezone(timedelta(hours=9))
 LOOKBACK_HOURS = 33  # 매일 14:00 KST 실행 기준, 여유를 둔 수집 창
-REQUEST_TIMEOUT = 15
+REQUEST_TIMEOUT = 25
 
 
 @dataclass
@@ -100,7 +100,7 @@ def collect_all() -> tuple[list[Candidate], list[dict]]:
             continue
 
         items = fetch_source(source, cutoff_utc)
-        print(f"[collect] {source['name']}: {len(items)}건 수집")
+        print(f"[collect] {source['name']}: {len(items)}건 수집", file=sys.stderr)
         if not items:
             # RSS는 등록돼 있지만 이번 실행에서 비어 있으면(오류 포함) 웹 검색 보완 후보로 넘긴다.
             needs_search.append(source)

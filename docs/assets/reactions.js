@@ -1,5 +1,5 @@
 
-window.WORKER_URL = "";
+window.WORKER_URL = "https://ai-news-reactions.ammi88-05f.workers.dev";
 function pickedKey(date, id){ return "reacted:" + date + ":" + id; }
 async function sendReaction(date, id, reaction, btn){
   if(!window.WORKER_URL) return;
