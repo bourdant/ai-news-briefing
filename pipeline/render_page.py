@@ -195,7 +195,8 @@ def render_day(data: dict) -> Path:
 
 def render_index() -> None:
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    days = sorted(DATA_DIR.glob("*.json"), reverse=True)
+    # 날짜별 브리핑(YYYY-MM-DD.json)만 — last_analysis.json 같은 상태 파일은 제외
+    days = sorted(DATA_DIR.glob("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].json"), reverse=True)
     items = []
     for f in days:
         d = json.loads(f.read_text(encoding="utf-8"))
