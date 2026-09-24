@@ -15,6 +15,7 @@
   - `daily-briefing.yml` — 매일 05:00 UTC(14:00 KST) 전체 파이프라인 실행
   - `biweekly-analysis.yml` — 매주 월요일 체크, 실제로는 14일 간격으로만 분석 전송
   - `deploy-worker.yml` — `cloudflare-worker/` 변경 시 Worker 자동 배포
+  - `datalab-weekly.yml` — 매주 월요일 00:00 UTC(09:00 KST) 네이버 데이터랩 헤어케어·헤어기기 인기검색어 TOP10을 카카오톡으로 전송
 
 ## 필요한 GitHub Secrets
 
