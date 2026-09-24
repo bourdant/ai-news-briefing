@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from claude_cli import run_claude
 
 KST = timezone(timedelta(hours=9))
+MESSAGE_LIMIT = 700  # 텔레그램 본문 길이 (텔레그램 자체 한도는 4096자)
 
 CATEGORIES = [
     "model_release",  # 신규 모델/주요 기능 발표
@@ -30,7 +31,7 @@ JSON_SCHEMA = {
     "properties": {
         "date": {"type": "string"},
         "one_liner": {"type": "string"},
-        "kakao_text": {"type": "string"},
+        "message_text": {"type": "string"},
         "selection_note": {"type": ["string", "null"]},
         "articles": {
             "type": "array",
@@ -64,7 +65,7 @@ JSON_SCHEMA = {
             },
         },
     },
-    "required": ["date", "one_liner", "kakao_text", "articles"],
+    "required": ["date", "one_liner", "message_text", "articles"],
 }
 
 SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 편집자입니다.
@@ -103,9 +104,10 @@ SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 �
   씁니다.
 - 말투는 친근한 존댓말입니다.
 - one_liner: 그날 소식 전체를 묶는 한 문장. 친근한 존댓말.
-- kakao_text: 카카오톡에 보낼 본문으로, 반드시 200자(공백 포함) 이내여야 합니다.
-  형식은 "오늘의 한 줄: <one_liner 요약>" 줄바꿈 후 각 기사 제목을 줄바꿈으로 나열한
-  목록만 담습니다. 링크나 버튼 문구는 절대 넣지 마세요(버튼은 별도로 붙습니다).
+- message_text: 텔레그램에 보낼 본문으로, 700자(공백 포함) 이내여야 합니다.
+  형식은 "오늘의 한 줄: <one_liner 요약>" 줄바꿈 후 각 기사 제목을 "• " 글머리로
+  줄바꿈해 나열한 목록만 담습니다. 마크다운 문법, 링크, 버튼 문구는 절대 넣지 마세요
+  (버튼은 별도로 붙습니다).
 """
 
 
@@ -155,13 +157,13 @@ def select_and_write(candidates: list, needs_search: list[dict]) -> dict:
     if not data:
         raise RuntimeError(f"Claude 응답에 structured_output이 없습니다: {envelope.get('result')}")
 
-    if len(data.get("kakao_text", "")) > 200:
+    if len(data.get("message_text", "")) > MESSAGE_LIMIT:
         print(
-            f"[select_and_write] 경고: kakao_text가 {len(data['kakao_text'])}자로 200자를 "
-            "초과했습니다. 잘라냅니다.",
+            f"[select_and_write] 경고: message_text가 {len(data['message_text'])}자로 "
+            f"{MESSAGE_LIMIT}자를 초과했습니다. 잘라냅니다.",
             file=sys.stderr,
         )
-        data["kakao_text"] = data["kakao_text"][:200]
+        data["message_text"] = data["message_text"][:MESSAGE_LIMIT]
 
     data.setdefault("date", today_kst)
     for i, art in enumerate(data.get("articles", []), start=1):

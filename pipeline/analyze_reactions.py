@@ -1,4 +1,4 @@
-"""2주(14일)마다: Cloudflare Worker에서 반응 데이터를 모아 Claude로 요약하고 카카오톡 전송.
+"""2주(14일)마다: Cloudflare Worker에서 반응 데이터를 모아 Claude로 요약하고 텔레그램 전송.
 GitHub Actions에서는 매주 실행하되, 이 스크립트가 14일 간격을 자체적으로 체크한다.
 """
 from __future__ import annotations
@@ -101,7 +101,7 @@ def _summarize_with_claude(enriched: list[dict], since: str, until: str) -> str:
     system = (
         "당신은 AI 뉴스 브리핑 구독자의 2주치 반응(🔥/😐/💤 클릭) 데이터를 분석해 "
         "친근한 존댓말 한국어로 짧게 요약하는 역할입니다. 중학생도 이해할 쉬운 말을 씁니다. "
-        "카카오톡 메시지 본문으로 쓸 것이므로 전체 200자 이내로, 어떤 종류의 소식에 "
+        "텔레그램 메시지 본문으로 쓸 것이므로 전체 400자 이내로, 어떤 종류의 소식에 "
         "🔥가 많았는지 1~2가지를 콕 집어 설명하세요. 마크다운 없이 순수 텍스트만 출력하세요."
     )
     user = (
@@ -112,7 +112,7 @@ def _summarize_with_claude(enriched: list[dict], since: str, until: str) -> str:
     )
     envelope = run_claude(prompt=user, system_prompt=system)
     text = (envelope.get("result") or "").strip()
-    return text[:200]
+    return text[:400]
 
 
 def main() -> None:
@@ -135,11 +135,11 @@ def main() -> None:
     summary = _summarize_with_claude(enriched, since, until)
     print(f"[analyze_reactions] 요약: {summary}")
 
-    from send_kakao import send_text_with_button
+    from send_telegram import send_text_with_button
 
     page_base = os.environ["PAGE_BASE_URL"].rstrip("/")
-    result = send_text_with_button(summary, "브리핑 목록 보기", page_base)
-    print(f"[analyze_reactions] 카카오톡 전송 완료: {result}")
+    send_text_with_button(summary, "브리핑 목록 보기", page_base, bot="news")
+    print("[analyze_reactions] 텔레그램 전송 완료")
 
     _save_state(until)
 
