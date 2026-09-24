@@ -15,7 +15,7 @@
   - `daily-briefing.yml` — 매일 05:00 UTC(14:00 KST) 전체 파이프라인 실행
   - `biweekly-analysis.yml` — 매주 월요일 체크, 실제로는 14일 간격으로만 분석 전송
   - `deploy-worker.yml` — `cloudflare-worker/` 변경 시 Worker 자동 배포
-  - `datalab-weekly.yml` — 매주 월요일 00:00 UTC(09:00 KST) 네이버 데이터랩 헤어케어·헤어기기 인기검색어 TOP10을 카카오톡으로 전송
+  - `datalab-weekly.yml` — 매주 월요일 00:00 UTC(09:00 KST) 네이버 데이터랩 헤어케어·헤어기기 인기검색어 TOP15를 텔레그램으로 전송
 
 ## 필요한 GitHub Secrets
 
@@ -27,6 +27,8 @@
 | `KAKAO_CLIENT_SECRET` | (선택) 카카오 앱에서 Client Secret을 켠 경우만 |
 | `GH_PAT` | refresh_token이 회전될 때 이 Secret을 자동 갱신하기 위한 개인 액세스 토큰 (repo 권한) |
 | `ANALYSIS_API_KEY` | Worker `/analysis` 엔드포인트 보호용 공유 키 (Worker secret과 동일 값) |
+| `TELEGRAM_BOT_TOKEN` | 주간 데이터랩 순위 알림용 텔레그램 봇 토큰 (`@BotFather`에서 발급) |
+| `TELEGRAM_CHAT_ID` | 알림 받을 대화방 ID — 비워 두면 첫 실행 때 봇에게 온 메시지에서 찾아 자동 저장 (GH_PAT 사용) |
 
 ## 필요한 GitHub Actions Variables (Settings → Secrets and variables → Actions → Variables)
 

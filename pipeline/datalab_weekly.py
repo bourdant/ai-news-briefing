@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""네이버 데이터랩 쇼핑인사이트 인기검색어(헤어케어·헤어기기)를 주 1회 카카오톡으로 보낸다.
+"""네이버 데이터랩 쇼핑인사이트 인기검색어(헤어케어·헤어기기)를 주 1회 텔레그램으로 보낸다.
 GitHub Actions datalab-weekly.yml에서 호출한다.
 """
 from __future__ import annotations
@@ -9,7 +9,7 @@ import sys
 
 import requests
 
-from send_kakao import send_text_with_button
+from send_telegram import send_text_with_button
 
 DATALAB = "https://datalab.naver.com/shoppingInsight"
 PAGE_URL = f"{DATALAB}/sCategory.naver"
@@ -28,8 +28,7 @@ CATEGORIES = [
 ]
 AGE = "30,40,50"
 GENDER = "f"
-TOP_N = 10
-KAKAO_TEXT_LIMIT = 200  # 카카오 텍스트 템플릿 최대 길이
+TOP_N = 15
 
 
 def fetch_ranks(s: requests.Session, cid: int, start: dt.date, end: dt.date) -> list[dict]:
@@ -44,14 +43,9 @@ def fetch_ranks(s: requests.Session, cid: int, start: dt.date, end: dt.date) -> 
     return ranks
 
 
-def build_text(name: str, ranks: list[dict], start: dt.date, end: dt.date) -> str:
-    header = f"📊 {name} 인기검색어 TOP{TOP_N}\n여성 30~50대 · {start:%m/%d}~{end:%m/%d}\n\n"
+def build_section(name: str, ranks: list[dict]) -> str:
     lines = [f"{k['rank']}. {k['keyword']}" for k in ranks[:TOP_N]]
-    text = header + "\n".join(lines)
-    while len(text) > KAKAO_TEXT_LIMIT and lines:
-        lines.pop()
-        text = header + "\n".join(lines)
-    return text
+    return f"■ {name} TOP{TOP_N}\n" + "\n".join(lines)
 
 
 def main() -> None:
@@ -62,16 +56,13 @@ def main() -> None:
     s = requests.Session()
     s.get(PAGE_URL, headers=H, timeout=20).raise_for_status()
 
-    messages = []
-    for name, cid in CATEGORIES:
-        ranks = fetch_ranks(s, cid, start, end)
-        text = build_text(name, ranks, start, end)
-        print(text, end="\n\n")
-        messages.append(text)
+    header = f"📊 헤어 인기검색어 주간 순위\n여성 30~50대 · {start:%m/%d}~{end:%m/%d}"
+    sections = [build_section(name, fetch_ranks(s, cid, start, end)) for name, cid in CATEGORIES]
+    text = "\n\n".join([header, *sections])
+    print(text)
 
-    for text in messages:
-        send_text_with_button(text, "데이터랩에서 보기", PAGE_URL)
-    print(f"[datalab_weekly] 카카오톡 {len(messages)}건 전송 완료")
+    send_text_with_button(text, "데이터랩에서 보기", PAGE_URL)
+    print("[datalab_weekly] 텔레그램 전송 완료")
 
 
 if __name__ == "__main__":
