@@ -48,5 +48,6 @@ jobs:
             echo "변경사항 없음"
           else
             git commit -m "chore: update biweekly analysis state"
+            git pull --rebase
             git push
           fi

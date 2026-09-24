@@ -52,5 +52,6 @@ jobs:
             echo "변경사항 없음"
           else
             git commit -m "chore: daily AI news briefing $(date -u +%Y-%m-%d)"
+            git pull --rebase
             git push
           fi
