@@ -8,11 +8,14 @@ from __future__ import annotations
 
 import json
 import sys
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 from claude_cli import run_claude
 
 KST = timezone(timedelta(hours=9))
+DATA_DIR = Path(__file__).resolve().parent.parent / "docs" / "data"
+RECENT_DAYS = 3  # 중복 판단에 넘길 최근 브리핑 일수
 MESSAGE_LIMIT = 1500  # 텔레그램 본문 길이 (텔레그램 자체 한도는 4096자)
 
 CATEGORIES = [
@@ -56,11 +59,13 @@ JSON_SCHEMA = {
                         },
                     },
                     "body": {"type": "string"},
+                    "event_date": {"type": "string"},
+                    "followup_note": {"type": ["string", "null"]},
                     "metric_note": {"type": ["string", "null"]},
                 },
                 "required": [
                     "id", "rank", "title", "category", "is_official_announcement",
-                    "source_count", "sources", "body",
+                    "source_count", "sources", "body", "event_date",
                 ],
             },
         },
@@ -82,6 +87,14 @@ SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 �
   분량은 가장 중요한(rank=1) 기사에 비유나 배경 설명을 한 문장 정도 더 추가하는
   식으로 씁니다 (아래 body 길이 제한은 이 경우에도 그대로 지킵니다).
 - 중요도 순으로 rank 1부터 정렬하세요.
+- event_date: 그 일이 실제로 일어난(발표·발언·사고가 있었던) 날짜를 "YYYY-MM-DD"로
+  적습니다. 기사가 나온 날이 아니라 사건 날짜이며, 해외 소식은 현지 날짜 기준입니다.
+  소스에서 날짜를 확인하고, 애매하면 WebSearch로 확인하세요.
+- 중복 판단: 아래에 최근 며칠 치 브리핑 목록을 줍니다. 이미 다룬 소식은 원칙적으로
+  다시 넣지 않습니다. 다만 (1) 아주 중요하거나 (2) 그 뒤 새로운 진전(후속 발표, 반응,
+  수치 변화 등)이 있으면 다시 넣을 수 있고, 이때 followup_note에 "9/24 브리핑에서 다룬
+  소식의 후속 — 새로 나온 내용: …"처럼 무엇이 새로워졌는지 한 문장으로 적습니다.
+  새 소식이면 followup_note는 null.
 - 매체마다 관련 수치(투자액, 이용자 수, 점유율 등)의 기준이 서로 다르면
   metric_note 필드에 "A매체는 ~기준, B매체는 ~기준"처럼 각각 명시하세요.
   해당 없으면 null.
@@ -115,7 +128,8 @@ SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 �
 - 분량: 모든 기사 body를 합친 길이가 message_text의 약 두 배(1400~2000자)가 되게
   씁니다. 기사 하나당 5~7문장: 무슨 일인지(핵심 수치 포함) → 배경·맥락 → 이게 왜
   대단하거나 문제인지, 읽는 사람한테 무슨 의미인지(비유 포함) → 앞으로 어떻게 될지
-  → ENTP 코멘트. 첫 문단(사실·맥락)도 기사 요약체가 아니라 친구에게 설명하듯 ENTP 말투를
+  → ENTP 코멘트. 첫 문장에 "지난 24일(현지시간)"처럼 언제 일어난 일인지 넣고, 후속
+  소식이면 이전에 무슨 일이 있었고 이번에 뭐가 새로운지부터 짚습니다. 첫 문단(사실·맥락)도 기사 요약체가 아니라 친구에게 설명하듯 ENTP 말투를
   살려서 씁니다. 사실·맥락 부분과 의미·코멘트 부분을 줄바꿈 한 번으로 나눠 두 문단으로
   씁니다. rank가 높은 기사일수록 조금 더 길게 써도 됩니다.
 - one_liner: 그날 소식 전체를 묶는 한 문장. 뉴스 제목 같은 "~했다" 체가 아니라 ENTP 반말로,
@@ -124,7 +138,8 @@ SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 �
   (어려운 말 풀이가 붙어 조금 넘는 것은 괜찮지만 1300자는 넘기지 않습니다).
   위의 ENTP 말투를 쓰고, 이모지는 1~3개만.
   형식: 첫 줄은 오늘 분위기를 한 방에 요약하는 후킹 한 문장 → 빈 줄 → 기사마다
-  "• "로 시작하는 2~3문장 단락(① 무슨 일인지 핵심 사실과 수치 → ② 이게 왜 중요한지,
+  "• [9/24] "처럼 event_date(월/일)를 붙여 시작하는(후속 소식이면 "• [9/24·후속] "으로
+  시작하고 새로 나온 내용을 먼저 말하는) 2~3문장 단락(① 무슨 일인지 핵심 사실과 수치 → ② 이게 왜 중요한지,
   읽는 사람한테 무슨 의미인지, 가능하면 "카페 두 곳이 같은 날 신메뉴를 낸 셈" 같은 일상 비유로
   → ③ 촌철살인 코멘트)을 쓰고 기사 사이는 빈 줄로 띄움
   → 빈 줄 → "결론:"으로 시작해 생각할 거리를 던지는 한두 문장.
@@ -133,6 +148,24 @@ SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 �
   기사 제목을 그대로 옮기지 마세요. 마크다운 문법, 링크, 버튼 문구는 절대 넣지
   마세요(버튼은 별도로 붙습니다).
 """
+
+
+def _recent_briefings(today: str, days: int = RECENT_DAYS) -> list[dict]:
+    """오늘 이전 최근 며칠 치 브리핑의 기사 제목 (중복 판단용)."""
+    recent = []
+    for f in sorted(DATA_DIR.glob("[0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9].json"), reverse=True):
+        if f.stem >= today:
+            continue
+        d = json.loads(f.read_text(encoding="utf-8"))
+        recent.append({
+            "briefing_date": f.stem,
+            "articles": [
+                {"title": a["title"], "event_date": a.get("event_date")} for a in d.get("articles", [])
+            ],
+        })
+        if len(recent) >= days:
+            break
+    return recent
 
 
 def _build_user_prompt(candidates: list, needs_search: list[dict]) -> str:
@@ -162,6 +195,8 @@ def _build_user_prompt(candidates: list, needs_search: list[dict]) -> str:
         f"{json.dumps(cand_payload, ensure_ascii=False, indent=2)}\n\n"
         f"웹 검색으로 보완 확인이 필요한 소스:\n"
         f"{json.dumps(search_targets, ensure_ascii=False, indent=2)}\n\n"
+        f"최근 브리핑에서 이미 다룬 소식 (중복 판단용):\n"
+        f"{json.dumps(_recent_briefings(today_kst), ensure_ascii=False, indent=2)}\n\n"
         "위 규칙에 따라 선별하고 작성하세요."
     )
 

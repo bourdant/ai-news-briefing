@@ -121,6 +121,15 @@ def _esc(s: str) -> str:
     return html.escape(s or "", quote=True)
 
 
+def _event_date_label(event_date: str | None) -> str:
+    """"2026-09-24" -> "📅 9월 24일 · " (없거나 형식이 다르면 빈 문자열)."""
+    try:
+        _, m, d = (event_date or "").split("-")
+        return f"📅 {int(m)}월 {int(d)}일 · "
+    except ValueError:
+        return ""
+
+
 def _render_article(date: str, art: dict) -> str:
     sources_html = " ".join(
         f'<a href="{_esc(s["url"])}" target="_blank" rel="noopener">{_esc(s["name"])} ↗</a>'
@@ -134,11 +143,18 @@ def _render_article(date: str, art: dict) -> str:
     )
     category = CATEGORY_LABEL.get(art.get("category", "other"), "📌 기타")
     official = " · 공식 발표" if art.get("is_official_announcement") else ""
+    event = _event_date_label(art.get("event_date"))
+    followup_html = (
+        f'<div class="metric-note">🔁 {_esc(art["followup_note"])}</div>'
+        if art.get("followup_note")
+        else ""
+    )
     return f"""
 <article class="card" data-date="{_esc(date)}" data-id="{_esc(art['id'])}">
   <div class="rank">#{art.get('rank', 0)}</div>
   <h2>{_esc(art['title'])}</h2>
-  <div class="category">{category}{official} · {art.get('source_count', len(art.get('sources', [])))}곳에서 확인</div>
+  <div class="category">{event}{category}{official} · {art.get('source_count', len(art.get('sources', [])))}곳에서 확인</div>
+  {followup_html}
   <div class="body">{body_html}</div>
   {metric_html}
   <div class="sources">{sources_html}</div>
