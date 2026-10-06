@@ -1,0 +1,31 @@
+name: Telegram One-off (Napoleon cipher)
+
+on:
+  workflow_dispatch: {}
+
+jobs:
+  send:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt
+      - env:
+          TELEGRAM_NEWS_BOT_TOKEN: ${{ secrets.TELEGRAM_NEWS_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        working-directory: pipeline
+        run: |
+          python - <<'PY'
+          from send_telegram import send_text
+          parts = open("oneoff_napoleon.txt", encoding="utf-8").read().strip().split("\n=====\n")
+          for i, part in enumerate(parts):
+              if i == 0:
+                  send_text(part.strip(), "AI타임스 원문 보기",
+                            "https://www.aitimes.com/news/articleView.html?idxno=215961", bot="news")
+              else:
+                  send_text(part.strip(), bot="news")
+              print(f"sent {i + 1}/{len(parts)}")
+          PY
