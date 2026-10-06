@@ -7,6 +7,8 @@
 ## 구성
 
 - `pipeline/` — 수집(RSS) → 선별/작성(Claude Code CLI) → 렌더링 → 텔레그램 전송 파이썬 스크립트
+- `pipeline/rankings.py` — 기사 중요도 판단용: NBC 뉴스 AI 섹션, ABC 뉴스 기술 섹션, Techmeme 첫 화면,
+  조선일보 테크·IT 섹션의 '배치 순서'(편집자가 위에 건 순서)를 읽어 Claude에게 넘김
 - `pipeline/claude_cli.py` — Claude Code CLI를 헤드리스로 호출하는 공통 헬퍼 (API 과금 대신
   Claude Pro/Max 구독의 `CLAUDE_CODE_OAUTH_TOKEN` 사용)
 - `docs/` — GitHub Pages로 서빙되는 정적 사이트 (자동 생성됨)

@@ -8,6 +8,7 @@ import json
 import sys
 
 from collect import collect_all
+from rankings import collect_rankings
 from render_page import render
 from select_and_write import select_and_write
 from send_telegram import send_briefing
@@ -19,7 +20,9 @@ def main() -> None:
     print(f"[run_daily] 후보 {len(candidates)}건, 웹 검색 보완 {len(needs_search)}개 소스")
 
     print("[run_daily] 2/4 Claude로 선별/작성 중...")
-    data = select_and_write(candidates, needs_search)
+    rankings = collect_rankings()
+    print(f"[run_daily] 배치 순위 {len(rankings)}개 사이트 읽음")
+    data = select_and_write(candidates, needs_search, rankings)
     print(f"[run_daily] 선정된 기사 {len(data.get('articles', []))}건")
 
     print("[run_daily] 3/4 페이지 렌더링 중...")

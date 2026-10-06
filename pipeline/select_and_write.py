@@ -76,17 +76,26 @@ JSON_SCHEMA = {
 SYSTEM_PROMPT = f"""당신은 한국어로 AI 뉴스 브리핑을 작성하는 편집자입니다.
 아래 규칙을 정확히 지켜서, 주어진 JSON 스키마에 맞는 결과만 만들어내세요.
 
-[선별 규칙]
-- 2곳 이상의 서로 다른 소스(RSS 후보 또는 당신이 WebSearch로 확인한 소스)에서
-  다룬 소식만 남깁니다.
-- 예외: OpenAI, Anthropic, Google DeepMind 공식 블로그의 "신규 모델 출시" 또는
-  "주요 기능 발표"는 다른 곳에서 다루지 않았어도 무조건 포함합니다.
-  이 경우 is_official_announcement=true, sources는 공식 블로그 1개만 있어도 됩니다.
-- 하루 최대 5개, is_official_announcement 예외를 제외하면 2곳 이상 교차 확인된 것만.
-- 기준을 통과한 소식이 5개 미만이면 억지로 채우지 말고 개수를 줄이세요. 대신 남는
-  분량은 가장 중요한(rank=1) 기사에 비유나 배경 설명을 한 문장 정도 더 추가하는
-  식으로 씁니다 (아래 body 길이 제한은 이 경우에도 그대로 지킵니다).
-- 중요도 순으로 rank 1부터 정렬하세요.
+[선별 규칙 - 중요도는 주요 언론사의 '배치 순위'로 판단]
+- 아래 "주요 언론사 배치 순위"는 NBC 뉴스 AI 섹션, ABC 뉴스 기술 섹션, Techmeme 첫 화면,
+  조선일보 테크·IT 섹션에서 편집자가 위에서부터 배치한 순서입니다(1위 = 맨 위).
+  중요도는 당신의 감이 아니라 이 순위로 정합니다:
+  · 여러 사이트에서 위쪽에 걸린 소식일수록 중요합니다 (같은 사건이면 영어·한국어 제목이
+    달라도 같은 소식으로 묶어서 셉니다).
+  · 한 사이트에서만 나왔다면 그 사이트의 상위권(대략 5위 안)일 때 후보가 됩니다.
+  · 순위 목록의 AI와 직접 관련 없는 기사(일반 주식·연예 등)는 제외합니다.
+- 고른 소식의 세부 내용은 RSS 후보와 WebSearch로 확인합니다. 순위 목록에 없는 RSS 후보는
+  원칙적으로 고르지 않습니다. 예외: OpenAI, Anthropic, Google DeepMind 공식 블로그의
+  "신규 모델 출시"·"주요 기능 발표"는 순위와 상관없이 포함할 수 있습니다
+  (is_official_announcement=true, sources는 공식 블로그 1개만 있어도 됨).
+- 출처(sources) 규칙:
+  · 가능하면 원래 보도한 매체(로이터, 블룸버그, NBC, 파이낸셜타임스 등)를 적습니다.
+  · AI타임스처럼 해외 기사를 번역·인용한 기사는 원문과 같은 1곳으로 셉니다. 원문 매체를
+    확인할 수 있으면 원문 매체를 출처로 적고, AI타임스는 국내 소식이거나 국내 반응을
+    따로 취재한 경우에만 독립 출처로 적습니다.
+  · source_count는 서로 다른 원래 보도 매체의 수입니다.
+- 하루 최대 5개. 기준을 통과한 소식이 5개 미만이면 억지로 채우지 말고 개수를 줄이세요.
+- rank는 위 배치 순위 기준의 중요도 순으로 1부터 매깁니다.
 - event_date: 그 일이 실제로 일어난(발표·발언·사고가 있었던) 날짜를 "YYYY-MM-DD"로
   적습니다. 기사가 나온 날이 아니라 사건 날짜이며, 해외 소식은 현지 날짜 기준입니다.
   소스에서 날짜를 확인하고, 애매하면 WebSearch로 확인하세요.
@@ -186,7 +195,7 @@ def _recent_briefings(today: str, days: int = RECENT_DAYS) -> list[dict]:
     return recent
 
 
-def _build_user_prompt(candidates: list, needs_search: list[dict]) -> str:
+def _build_user_prompt(candidates: list, needs_search: list[dict], rankings: list[dict]) -> str:
     today_kst = datetime.now(KST).strftime("%Y-%m-%d")
     cand_payload = [
         {
@@ -213,15 +222,17 @@ def _build_user_prompt(candidates: list, needs_search: list[dict]) -> str:
         f"{json.dumps(cand_payload, ensure_ascii=False, indent=2)}\n\n"
         f"웹 검색으로 보완 확인이 필요한 소스:\n"
         f"{json.dumps(search_targets, ensure_ascii=False, indent=2)}\n\n"
+        f"주요 언론사 배치 순위 (중요도 판단 기준):\n"
+        f"{json.dumps(rankings, ensure_ascii=False, indent=2)}\n\n"
         f"최근 브리핑에서 이미 다룬 소식 (중복 판단용):\n"
         f"{json.dumps(_recent_briefings(today_kst), ensure_ascii=False, indent=2)}\n\n"
         "위 규칙에 따라 선별하고 작성하세요."
     )
 
 
-def select_and_write(candidates: list, needs_search: list[dict]) -> dict:
+def select_and_write(candidates: list, needs_search: list[dict], rankings: list[dict]) -> dict:
     today_kst = datetime.now(KST).strftime("%Y-%m-%d")
-    user_prompt = _build_user_prompt(candidates, needs_search)
+    user_prompt = _build_user_prompt(candidates, needs_search, rankings)
 
     envelope = run_claude(
         prompt=user_prompt,
@@ -251,7 +262,8 @@ def select_and_write(candidates: list, needs_search: list[dict]) -> dict:
 
 if __name__ == "__main__":
     from collect import collect_all
+    from rankings import collect_rankings
 
     cands, missing = collect_all()
-    result = select_and_write(cands, missing)
+    result = select_and_write(cands, missing, collect_rankings())
     print(json.dumps(result, ensure_ascii=False, indent=2))
