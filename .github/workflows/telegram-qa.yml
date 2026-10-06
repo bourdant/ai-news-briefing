@@ -1,0 +1,49 @@
+name: Telegram Q&A
+
+on:
+  schedule:
+    - cron: "*/5 * * * *" # 5분마다 AI 뉴스 봇에 온 질문 확인 (GitHub 사정으로 몇 분씩 밀릴 수 있음)
+  workflow_dispatch: {}
+
+concurrency:
+  group: telegram-qa
+  cancel-in-progress: false
+
+jobs:
+  answer:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - run: pip install -r requirements.txt
+
+      - name: Check for new questions
+        id: check
+        working-directory: pipeline
+        env:
+          TELEGRAM_NEWS_BOT_TOKEN: ${{ secrets.TELEGRAM_NEWS_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: python telegram_qa.py --check
+
+      # 질문이 있을 때만 Claude Code를 설치하고 답한다
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.pending == 'true'
+        with:
+          node-version: "22"
+
+      - name: Answer questions
+        if: steps.check.outputs.pending == 'true'
+        working-directory: pipeline
+        env:
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          TELEGRAM_NEWS_BOT_TOKEN: ${{ secrets.TELEGRAM_NEWS_BOT_TOKEN }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          npm install -g @anthropic-ai/claude-code
+          python telegram_qa.py

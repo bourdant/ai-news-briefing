@@ -60,10 +60,12 @@ def get_chat_id(bot: str = "default") -> str:
 
 
 def send_text(text: str, button_title: str | None = None, url: str | None = None,
-              bot: str = "default") -> dict:
+              bot: str = "default", reply_to: int | None = None) -> dict:
     if len(text) > TEXT_LIMIT:
         text = text[: TEXT_LIMIT - 1] + "…"
     payload = {"chat_id": get_chat_id(bot), "text": text, "disable_web_page_preview": True}
+    if reply_to:
+        payload["reply_parameters"] = {"message_id": reply_to, "allow_sending_without_reply": True}
     if button_title and url:
         payload["reply_markup"] = {"inline_keyboard": [[{"text": button_title, "url": url}]]}
     return _call(bot, "sendMessage", **payload)
